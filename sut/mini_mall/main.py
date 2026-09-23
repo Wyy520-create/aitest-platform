@@ -42,6 +42,8 @@ def seed_products():
             ("马克杯", "留形科技周边", 19.9, 200, "trinket"),
             ("显示器支架", "单臂铝合金", 259.0, 30, "digital"),
             ("USB-C 数据线", "100W 快充 2 米", 29.9, 500, "digital"),
+            # 秒杀商品：小库存，专供并发超卖(BUG-02)测试用
+            ("限量手办", "库存仅 5 件", 99.0, 5, "trinket"),
         ]
         for name, desc, price, stock, cat in products_data:
             db.add(models.Product(
