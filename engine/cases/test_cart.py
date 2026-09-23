@@ -70,7 +70,7 @@ def test_cannot_touch_others_cart_item(user, cart_api, base_url):
 
 
 @pytest.mark.bug_detection
-def test_negative_quantity_should_be_rejected(user, cart_api):
+def test_bug04_negative_quantity(user, cart_api):
     """【BUG-04 检测】quantity=-5 是非法值，契约应拒绝(422)。
 
     实际返回 201——负数数量进入下单链路后：总金额为负(平台倒贴)、
@@ -80,6 +80,6 @@ def test_negative_quantity_should_be_rejected(user, cart_api):
 
 
 @pytest.mark.bug_detection
-def test_zero_quantity_should_be_rejected(user, cart_api):
+def test_bug04_zero_quantity(user, cart_api):
     """【BUG-04 检测】quantity=0 同样非法（"买0件"无业务意义）。"""
     assert cart_api.add(product_id=1, quantity=0).status_code == 422

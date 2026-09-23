@@ -12,6 +12,14 @@ __pycache__/
 # 环境变量文件（可能含密钥）
 .env
 
+# 运行日志
+*.log
+
+# pytest 缓存与产物
+.pytest_cache/
+junit*.xml
+pytest-exec-*.xml
+
 # 前端构建产物与依赖
 node_modules/
 dist/

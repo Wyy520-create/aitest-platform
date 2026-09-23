@@ -24,7 +24,7 @@ def _new_user_client(base_url):
 
 
 @pytest.mark.bug_detection
-def test_horizontal_privilege_escalation(base_url):
+def test_bug01_horizontal_privilege_escalation(base_url):
     """【BUG-01 检测】水平越权：用户B访问用户A的订单详情应 403。
 
     攻击路径还原：A 下单拿到 order_id -> B 携带自己的合法 token 访问
@@ -43,7 +43,7 @@ def test_horizontal_privilege_escalation(base_url):
 
 
 @pytest.mark.bug_detection
-def test_concurrent_no_oversell(base_url, rush_product, product_api):
+def test_bug02_concurrent_no_oversell(base_url, rush_product, product_api):
     """【BUG-02 检测】并发超卖：库存 5 的商品，10 并发下单成功数必须 <= 5。
 
     检查库存与扣减库存非原子 -> 竞态窗口 -> 超卖/丢失更新。
@@ -77,7 +77,7 @@ def test_concurrent_no_oversell(base_url, rush_product, product_api):
 
 
 @pytest.mark.bug_detection
-def test_amount_precision(user, cart_api, order_api):
+def test_bug03_amount_precision(user, cart_api, order_api):
     """【BUG-03 检测】金额精度：0.1 元商品 x3 的订单总额必须精确等于 0.3。
 
     金额用 float 累加产生 0.30000000000000004 —— 单笔误差虽小，
@@ -91,7 +91,7 @@ def test_amount_precision(user, cart_api, order_api):
 
 
 @pytest.mark.bug_detection
-def test_negative_quantity_order_amount(user, cart_api, order_api):
+def test_bug04_negative_order_amount(user, cart_api, order_api):
     """【BUG-04 连锁检测】负数数量下单后订单总额不得为负。
 
     加购 -5 (BUG-04) -> 下单 -> 总额 -495.0：平台倒贴钱 + 库存反向增加。

@@ -70,7 +70,7 @@ def test_size_zero_rejected(product_api):
 
 
 @pytest.mark.bug_detection
-def test_page_zero_should_be_rejected(product_api):
+def test_bug05_page_zero_rejected(product_api):
     """【BUG-05 检测】page=0 是非法页码，服务端应拒绝(422/400)。
 
     实际返回 200 且数据与 page=1 相同——负 offset 被静默吞掉。
