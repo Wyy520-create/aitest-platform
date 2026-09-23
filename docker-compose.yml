@@ -1,0 +1,61 @@
+# aitest-platform 一键编排：被测系统 + 测试平台后端 + 前端网关 (+ 引擎工具)
+#
+# 启动整套:   docker compose up -d --build
+# 平台入口:   http://localhost:3000  (admin / admin123)
+# SUT 文档:   http://localhost:8000/docs
+# 手动跑一轮引擎: docker compose run --rm engine
+#
+# 服务拓扑:
+#   frontend(nginx:3000) --> backend(8100) --HTTP--> sut(8000)
+#                                        └─subprocess→ engine/run.sh(容器内)
+#   engine 服务不常驻(profiles=tools)，仅 CI/手动执行时拉起
+
+services:
+  # 被测系统：带 5 个注入缺陷的迷你电商
+  sut:
+    build: ./sut
+    environment:
+      # QA 环境开数据工厂接口（/api/dev/*），生产环境绝不设它
+      - TEST_MODE=1
+    volumes:
+      - sut-data:/data
+    ports:
+      - "8000:8000"
+
+  # 测试平台后端（镜像内含引擎，runner 通过 subprocess 调用）
+  backend:
+    build:
+      context: .
+      dockerfile: platform/backend/Dockerfile
+    environment:
+      - SUT_BASE_URL=http://sut:8000
+      - PLATFORM_DATABASE_URL=sqlite:////data/platform.db
+      - PLATFORM_ADMIN_PASSWORD=${PLATFORM_ADMIN_PASSWORD:-admin123}
+      # 配了 key 就走真 LLM，没配自动降级 MockLLM（见 .env.example）
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+    volumes:
+      - platform-data:/data
+    ports:
+      - "8100:8100"
+    depends_on:
+      - sut
+
+  # 前端网关：静态页 + /api 同源反代
+  frontend:
+    build: ./platform/frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # 测试引擎（非常驻）：CI 与手动"一次性容器执行"用
+  engine:
+    build: ./engine
+    environment:
+      - SUT_BASE_URL=http://sut:8000
+    profiles:
+      - tools
+
+volumes:
+  sut-data:       # SUT 的 SQLite：容器重建不丢数据
+  platform-data:  # 平台的执行历史/用例库

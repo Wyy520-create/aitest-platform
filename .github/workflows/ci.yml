@@ -1,0 +1,109 @@
+# CI：缺陷注入项目的正确断言姿势——不断言"全绿"，
+# 而断言"套件行为符合预期签名"（45/38/7/7）。
+#
+# 两个 job：
+# 1. api-tests     —— compose 起 SUT 容器，一次性 engine 容器跑 45 用例，
+#                     用 verify_suite.py 校验签名（任何注入缺陷被误修/套件被改坏都会报警）
+# 2. platform-e2e  —— 整套 compose 起来，纯 HTTP 走一遍
+#                     登录→触发套件执行→轮询→断言平台侧统计 45/38/7/7
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  api-tests:
+    name: 接口自动化套件（预期签名校验）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 构建并启动被测系统（TEST_MODE=1 数据工厂开启）
+        run: docker compose up -d --build sut
+
+      - name: 等待 SUT 就绪
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/ >/dev/null && echo "SUT ready" && exit 0
+            sleep 2
+          done
+          echo "SUT 未就绪"; docker compose logs sut; exit 1
+
+      - name: 一次性引擎容器跑 45 用例
+        run: |
+          mkdir -p artifacts
+          set +e
+          docker compose run --rm \
+            -v "$PWD/artifacts:/artifacts" \
+            engine --junitxml=/artifacts/junit.xml -q --tb=short
+          code=$?
+          set -e
+          # pytest 退出码: 0=全过 1=有用例失败 —— 对本仓库 1 是预期行为
+          [ $code -le 1 ] || exit $code
+
+      - name: 校验套件预期签名（45 用例/38 过/7 失败/7 命中缺陷）
+        run: python3 scripts/verify_suite.py artifacts/junit.xml
+
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-report
+          path: artifacts/junit.xml
+
+  platform-e2e:
+    name: 平台端到端（HTTP 闭环）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 启动全套编排（sut + backend + frontend）
+        run: docker compose up -d --build sut backend frontend
+
+      - name: 等待平台就绪
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8100/api/health >/dev/null && echo "backend ready" && exit 0
+            sleep 2
+          done
+          echo "平台未就绪"; docker compose logs backend; exit 1
+
+      - name: 登录 → 触发套件执行 → 校验平台统计
+        run: |
+          TOKEN=$(curl -s -X POST http://localhost:8100/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"admin","password":"admin123"}' \
+            | python3 -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+
+          EXEC_ID=$(curl -s -X POST http://localhost:8100/api/executions \
+            -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+            -d '{"exec_type":"suite"}' \
+            | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
+
+          # 轮询执行结果（容器内首轮拉镜像/启动 pytest，给足余量）
+          for i in $(seq 1 40); do
+            STATUS=$(curl -s http://localhost:8100/api/executions/$EXEC_ID \
+              -H "Authorization: Bearer $TOKEN" \
+              | python3 -c "import sys,json;print(json.load(sys.stdin)['status'])")
+            [ "$STATUS" != "running" ] && break
+            sleep 3
+          done
+
+          curl -s http://localhost:8100/api/executions/$EXEC_ID \
+            -H "Authorization: Bearer $TOKEN" | python3 -c "
+          import sys, json
+          e = json.load(sys.stdin)
+          assert e['status'] == 'failed', f'状态异常: {e}'
+          assert (e['total'], e['passed'], e['failed'], e['bug_found']) == (45, 38, 7, 7), f'统计异常: {e}'
+          print('平台端到端 OK: 45/38/7/7, bug_found=7')
+          "
+
+      - name: 前端网关可达性
+        run: curl -sf http://localhost:3000/ | grep -q aitest-platform
+
+      - name: 收尾输出编排日志
+        if: always()
+        run: docker compose logs --tail=50

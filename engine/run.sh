@@ -9,5 +9,12 @@ cd "$(dirname "$0")"
 export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 export SUT_BASE_URL="${SUT_BASE_URL:-http://localhost:8000}"
 
-# $1 可选：传给 pytest 的额外参数（如 -m smoke / -m bug_detection）
-exec .venv/bin/python -m pytest "$@"
+# 本机开发优先用项目 venv；容器/CI 镜像里没有 venv，用系统 python
+if [ -x ".venv/bin/python" ]; then
+  PY=.venv/bin/python
+else
+  PY=python3
+fi
+
+# $@ 可选：传给 pytest 的额外参数（如 -m smoke / --junitxml=...）
+exec "$PY" -m pytest "$@"

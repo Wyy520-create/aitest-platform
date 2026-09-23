@@ -9,6 +9,8 @@
 """
 from fastapi import FastAPI
 
+import os
+
 from .database import Base, engine, SessionLocal
 from .routers import auth, products, cart, orders
 from . import models
@@ -72,6 +74,12 @@ app.include_router(auth.router)
 app.include_router(products.router)
 app.include_router(cart.router)
 app.include_router(orders.router)
+
+# 测试数据工厂接口：只在测试环境注册（生产环境连路由都不存在，
+# 不是"鉴权挡住"而是"根本没这个面"——安全上更彻底）
+if os.getenv("TEST_MODE") == "1":
+    from .routers import dev_tools
+    app.include_router(dev_tools.router)
 
 
 @app.get("/")

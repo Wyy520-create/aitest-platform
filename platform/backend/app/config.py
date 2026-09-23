@@ -14,8 +14,8 @@ ADMIN_PASSWORD = os.getenv("PLATFORM_ADMIN_PASSWORD", "admin123")
 # 被测系统地址（引擎打它；compose 里是服务名 sut:8000）
 SUT_BASE_URL = os.getenv("SUT_BASE_URL", "http://localhost:8000")
 
-# 测试引擎入口（绝对路径，subprocess 用）
-ENGINE_RUN = BACKEND_DIR.parent.parent / "engine" / "run.sh"
+# 测试引擎入口（绝对路径，subprocess 用；容器环境里布局不同时用环境变量覆盖）
+ENGINE_RUN = os.getenv("ENGINE_RUN", str(BACKEND_DIR.parent.parent / "engine" / "run.sh"))
 
 # LLM 配置：DeepSeek。没配 key 时自动降级为 MockLLM（保证全流程可演示）
 LLM_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")

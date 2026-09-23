@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>aitest-platform 智能接口测试平台</title>
-  <!-- 依赖本地化（vendor/）：断网、内网、CDN 被墙都能跑（面试点：离线可交付） -->
-  <link rel="stylesheet" href="vendor/element-plus.css">
+  <!-- 依赖本地化（vendor/）：断网、内网、CDN 被墙都能跑（面试点：离线可交付）
+       ?v= 防缓存：发版后浏览器不再用旧的 vendor 副本 -->
+  <link rel="stylesheet" href="vendor/element-plus.css?v=1">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f2f5; }
@@ -278,9 +279,9 @@
   </template>
 </div>
 
-<script src="vendor/vue.global.prod.js"></script>
-<script src="vendor/element-plus.full.min.js"></script>
-<script src="vendor/echarts.min.js"></script>
+<script src="vendor/vue.global.prod.js?v=1"></script>
+<script src="vendor/element-plus.full.min.js?v=1"></script>
+<script src="vendor/echarts.min.js?v=1"></script>
 <script>
 /* ================= API 封装（fetch + token + 401 统一跳登录） ================= */
 const API_BASE = location.port === '5500' ? 'http://localhost:8100' : '';  // 静态服务器 5500 → 后端 8100

@@ -1,0 +1,8 @@
+# 根上下文构建（platform/backend/Dockerfile）时排除：
+# 虚拟环境、缓存、本地数据库、日志——它们要么体积巨大要么是本机私有
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+*.db
+*.log
+.git/

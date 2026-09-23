@@ -81,19 +81,29 @@ def user(auth_api):
 def rush_product(base_url):
     """并发测试专用：把秒杀商品库存重置为 5。
 
-    说明：这是"灰盒数据准备"——用数据库直连做测试前置条件（准备阶段），
-    验证阶段仍然纯黑盒（只通过 HTTP 断言）。这在公司里是标准做法：
-    测试环境的数据准备直连库，被测行为验证走接口。
+    数据准备两级降级（灰盒 -> 纯黑盒）：
+    1. 本地开发：引擎与 SUT 同机，直连 SQLite 重置（最快）
+    2. 容器/CI：引擎与 SUT 隔离，走 SUT 的 TEST_MODE 数据工厂接口
+       （POST /api/dev/reset-stock，生产环境不注册该路由）
+
+    验证阶段始终纯黑盒（只通过 HTTP 断言）。测试环境的数据准备
+    直连库或走数据工厂，被测行为验证走接口——公司里的标准做法。
     """
-    if not SUT_DB.exists():
-        pytest.skip("本地开发模式（SQLite）才有秒杀库存重置")
-    conn = sqlite3.connect(SUT_DB)
-    conn.execute("UPDATE products SET stock = 5 WHERE id = ?", (RUSH_PRODUCT_ID,))
-    conn.commit()
-    conn.close()
+    def _reset(stock: int):
+        if SUT_DB.exists():
+            conn = sqlite3.connect(SUT_DB)
+            conn.execute("UPDATE products SET stock = ? WHERE id = ?", (stock, RUSH_PRODUCT_ID))
+            conn.commit()
+            conn.close()
+        else:
+            resp = requests.post(
+                f"{BASE_URL}/api/dev/reset-stock",
+                json={"product_id": RUSH_PRODUCT_ID, "stock": stock}, timeout=10,
+            )
+            if resp.status_code == 404:
+                pytest.skip("SUT 未开启 TEST_MODE（无数据工厂接口）且非本地开发模式")
+            resp.raise_for_status()
+
+    _reset(5)
     yield RUSH_PRODUCT_ID
-    # 收尾：再重置，不影响后续用例
-    conn = sqlite3.connect(SUT_DB)
-    conn.execute("UPDATE products SET stock = 5 WHERE id = ?", (RUSH_PRODUCT_ID,))
-    conn.commit()
-    conn.close()
+    _reset(5)  # 收尾：再重置，不影响后续用例
