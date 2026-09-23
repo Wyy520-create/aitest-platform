@@ -1,0 +1,21 @@
+# Python 虚拟环境（体积大且人人可生成，不进仓库）
+.venv/
+venv/
+
+# Python 编译缓存
+__pycache__/
+*.pyc
+
+# SQLite 数据库文件（本地数据，不入库）
+*.db
+
+# 环境变量文件（可能含密钥）
+.env
+
+# 前端构建产物与依赖
+node_modules/
+dist/
+
+# IDE
+.idea/
+.vscode/
