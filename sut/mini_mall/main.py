@@ -10,7 +10,7 @@
 from fastapi import FastAPI
 
 from .database import Base, engine, SessionLocal
-from .routers import auth, products
+from .routers import auth, products, cart, orders
 from . import models
 
 
@@ -65,9 +65,11 @@ def on_startup():
     seed_products()
 
 
-# 注册路由：prefix 已在各 router 里声明（/api/auth、/api/products）
+# 注册路由：prefix 已在各 router 里声明（/api/auth、/api/products...）
 app.include_router(auth.router)
 app.include_router(products.router)
+app.include_router(cart.router)
+app.include_router(orders.router)
 
 
 @app.get("/")

@@ -69,3 +69,58 @@ class ProductPageOut(BaseModel):
     total: int
     page: int
     size: int
+
+
+# ---------- 购物车相关 ----------
+
+class CartItemAdd(BaseModel):
+    """加购请求体。
+
+    【BUG-04 · 注入缺陷】quantity 只声明了 int 类型，没有 gt=0 校验，
+    所以 -5 也能通过——负数数量会导致下单时"倒贴钱 + 库存反向增加"。
+    正确写法：quantity: int = Field(gt=0, le=999)
+    """
+    product_id: int
+    quantity: int = 1
+
+
+class CartItemUpdate(BaseModel):
+    """修改数量请求体。同样不校验正数（BUG-04 的第二入口）。"""
+    quantity: int
+
+
+class CartItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    product_id: int
+    quantity: int
+    # 嵌套展示商品快照，前端购物车页不用二次查询
+    product: Optional[ProductOut] = None
+
+
+# ---------- 订单相关 ----------
+
+class OrderItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    product_id: int
+    product_name: str
+    price: float
+    quantity: int
+
+
+class OrderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    total_amount: float
+    status: str
+    created_at: datetime
+    items: list[OrderItemOut] = []
+
+
+class OrderPageOut(BaseModel):
+    items: list[OrderOut]
+    total: int
