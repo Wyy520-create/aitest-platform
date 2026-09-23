@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine, SessionLocal
 from . import models  # noqa: F401 确保建表时模型已注册
 from .security import ensure_admin, router as auth_router
-from .routers import executions, cases, ai, dashboard
+from .routers import executions, cases, ai, dashboard, qa
 
 app = FastAPI(
     title="aitest-platform 测试平台",
@@ -40,6 +40,7 @@ app.include_router(executions.router)
 app.include_router(cases.router)
 app.include_router(ai.router)
 app.include_router(dashboard.router)
+app.include_router(qa.router)
 
 
 @app.get("/api/health")

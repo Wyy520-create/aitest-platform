@@ -21,3 +21,6 @@ ENGINE_RUN = os.getenv("ENGINE_RUN", str(BACKEND_DIR.parent.parent / "engine" / 
 LLM_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 LLM_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 LLM_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+
+# RAG 知识库语料目录（docs/）。本地默认是仓库 docs/；容器布局不同，显式覆盖
+KNOWLEDGE_DIR = os.getenv("KNOWLEDGE_DIR", str(BACKEND_DIR.parent.parent / "docs"))

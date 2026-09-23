@@ -24,6 +24,9 @@ RUN pip install --no-cache-dir \
 
 COPY engine/ /app/engine/
 COPY platform/backend/app/ /app/backend/app/
+# RAG 知识库语料：只拷 docs/（检索语料）。README.md 刻意不进语料——
+# 它变动频繁，拷进容器会使本地/容器评测输入不一致（见 knowledge.py）
+COPY docs/ /app/docs/
 
 # 防御 git 权限丢失导致 run.sh 不可执行（subprocess 直接调它）
 RUN chmod +x /app/engine/run.sh
@@ -35,6 +38,7 @@ ENV PLATFORM_DATABASE_URL="sqlite:////data/platform.db"
 # 容器布局与本地不同（本地是 <repo>/platform/backend，上两级即 repo 根；
 # 容器是 /app/backend，上两级是 /，推导会得出错误路径）——显式声明引擎入口
 ENV ENGINE_RUN="/app/engine/run.sh"
+ENV KNOWLEDGE_DIR="/app/docs"
 
 EXPOSE 8100
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8100"]

@@ -107,3 +107,13 @@ jobs:
       - name: 收尾输出编排日志
         if: always()
         run: docker compose logs --tail=50
+
+  rag-eval:
+    name: RAG 检索质量评测（hit@3 / MRR / 拒答）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 评测只依赖标准库（评测器刻意不 import requests/LLM），直接跑
+      - name: 跑 7 类场景评测集（21 条）
+        run: python3 scripts/eval_rag.py

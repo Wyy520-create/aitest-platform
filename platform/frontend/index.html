@@ -42,6 +42,9 @@
     .toolbar .grow { flex: 1; }
     #chart { width: 100%; height: 320px; }
     .kv { font-size: 12px; color: #909399; line-height: 1.9; word-break: break-all; }
+    .cite-card { border: 1px solid #ebeef5; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: #fafbfc; }
+    .cite-head { font-size: 13px; color: #303133; font-weight: 600; margin-bottom: 4px; }
+    .cite-src { color: #c0c4cc; font-size: 12px; margin-left: 8px; font-weight: 400; }
   </style>
 </head>
 <body>
@@ -75,6 +78,7 @@
         <div class="item" :class="{active: view==='exec'}" @click="go('exec')">▶️ 执行中心</div>
         <div class="item" :class="{active: view==='cases'}" @click="go('cases')">📁 用例管理</div>
         <div class="item" :class="{active: view==='ai'}" @click="go('ai')">🤖 AI 工场</div>
+        <div class="item" :class="{active: view==='rag'}" @click="go('rag')">💬 RAG 问答</div>
       </div>
 
       <div class="main">
@@ -274,6 +278,65 @@
           </div>
         </div>
 
+        <!-- ============ RAG 问答 ============ -->
+        <div v-if="view==='rag'">
+          <div class="panel">
+            <h3>测试领域知识问答（RAG）</h3>
+            <div class="kv" style="margin-bottom:12px">
+              链路：BM25 检索知识库（项目文档 + 测试领域知识切片）→ 相关片段拼 Prompt → LLM 基于片段作答。
+              知识库外的问题会被<b>拒答</b>（幻觉防护）；未接 LLM 时降级为"检索直出"。
+            </div>
+            <div style="display:flex;gap:10px">
+              <el-input v-model="qaForm.question" size="large" placeholder="如：秒杀为什么超卖？/ 分页接口怎么设计用例？" @keyup.enter="qaAsk"/>
+              <el-button type="primary" size="large" :loading="qaForm.loading" @click="qaAsk">提问</el-button>
+            </div>
+            <div style="margin-top:10px">
+              <el-button v-for="q in ['项目埋了几个缺陷','0.1x3为什么是0.30000000000000004','CI为什么不能断言全绿','月球上有几只企鹅']"
+                         :key="q" size="small" text type="info" @click="qaForm.question=q; qaAsk()">{{ q }}</el-button>
+            </div>
+          </div>
+
+          <div class="panel" v-if="qaForm.result">
+            <h3>回答 <el-tag size="small" effect="plain" :type="qaForm.result.refused ? 'info' : 'success'">{{ qaForm.result.refused ? '拒答(知识库外)' : '已回答' }}</el-tag>
+              <el-tag size="small" effect="plain" type="warning" style="margin-left:6px">{{ qaForm.result.llm }}</el-tag></h3>
+            <div style="white-space:pre-wrap;line-height:1.8;color:#303133;font-size:14px">{{ qaForm.result.answer }}</div>
+            <template v-if="qaForm.result.citations.length">
+              <h3 style="margin-top:18px">引用片段（BM25 召回）</h3>
+              <div v-for="(c,i) in qaForm.result.citations" :key="i" class="cite-card">
+                <div class="cite-head">[{{i+1}}] {{ c.title }} <span class="v-blue">score {{ c.score }}</span> <span class="cite-src">{{ c.source }}</span></div>
+                <div class="kv">{{ c.snippet }}…</div>
+              </div>
+            </template>
+          </div>
+
+          <div class="panel">
+            <h3>7 类场景质量评测
+              <el-button size="small" type="primary" style="margin-left:10px" :loading="evalLoading" @click="loadEval">▶ 跑评测</el-button>
+            </h3>
+            <div class="kv" style="margin-bottom:10px">
+              21 条用例分 7 类：概念解释 / 缺陷诊断 / 用例设计 / 项目事实 / 工具流程 / 拒答防护 / 口语化短查询。
+              指标为检索层确定性指标（CI 同源断言）：hit@3、MRR、拒答正确率。
+            </div>
+            <template v-if="evalReport">
+              <div class="stat-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:8px">
+                <div class="stat-card"><div class="label">hit@3</div><div class="value v-green">{{ evalReport.hit_at_k }}</div></div>
+                <div class="stat-card"><div class="label">MRR</div><div class="value v-blue">{{ evalReport.mrr }}</div></div>
+                <div class="stat-card"><div class="label">拒答正确率</div><div class="value v-orange">{{ evalReport.refuse_accuracy }}</div></div>
+                <div class="stat-card"><div class="label">用例通过</div><div class="value" :class="evalReport.all_passed ? 'v-green' : 'v-red'">{{ evalReport.details.filter(d=>d.ok).length }}/{{ evalReport.total }}</div></div>
+              </div>
+              <el-table :data="evalCats" size="small" border>
+                <el-table-column prop="cat" label="场景类别"/>
+                <el-table-column prop="ok" label="通过/总数" width="120">
+                  <template #default="{row}">{{ row.ok }}/{{ row.total }}</template>
+                </el-table-column>
+                <el-table-column label="通过率" width="100">
+                  <template #default="{row}"><span :class="row.rate===1 ? 'v-green' : 'v-red'">{{ (row.rate*100).toFixed(0) }}%</span></template>
+                </el-table-column>
+              </el-table>
+            </template>
+          </div>
+        </div>
+
       </div>
     </div>
   </template>
@@ -344,6 +407,7 @@ createApp({
       if (v === 'exec') loadExecutions();
       if (v === 'cases') loadCases();
       if (v === 'ai') { loadAiStats(); loadDraftCases(); }
+      if (v === 'rag') loadEval();
     }
 
     /* ---------- 数据加载 ---------- */
@@ -457,6 +521,33 @@ createApp({
       generating.value = false;
     }
 
+    /* ---------- RAG 问答与评测 ---------- */
+    const qaForm = reactive({ question: '', loading: false, result: null });
+    const evalReport = ref(null);
+    const evalLoading = ref(false);
+    const evalCats = computed(() => {
+      if (!evalReport.value) return [];
+      const bc = evalReport.value.by_category;
+      return Object.entries(bc).map(([cat, s]) => ({ cat, ...s }));
+    });
+
+    async function qaAsk() {
+      if (!qaForm.question.trim()) { ElMessage.warning('请输入问题'); return; }
+      qaForm.loading = true;
+      try {
+        qaForm.result = await api('POST', '/api/qa/ask', { question: qaForm.question });
+      } catch (e) { ElMessage.error(e.message); }
+      qaForm.loading = false;
+    }
+
+    async function loadEval() {
+      evalLoading.value = true;
+      try {
+        evalReport.value = await api('GET', '/api/qa/eval');
+      } catch (e) { ElMessage.error(e.message); }
+      evalLoading.value = false;
+    }
+
     /* ---------- ECharts 趋势图 ---------- */
     let chart = null;
     function renderChart() {
@@ -495,7 +586,8 @@ createApp({
     return { token, user, loginForm, logining, doLogin, logout, view, go,
       dash, aiStats, executions, cases, draftCases, caseFilter, starting, polling,
       startExec, detail, openDetail, resultRowClass, caseForm, openCaseForm, saveCase, delCase, review,
-      generating, genResult, generate, statusType, caseStatusType, statusName, fmtTime };
+      generating, genResult, generate, statusType, caseStatusType, statusName, fmtTime,
+      qaForm, qaAsk, evalReport, evalLoading, evalCats, loadEval };
   },
 })
 .use(ElementPlus)

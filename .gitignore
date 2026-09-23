@@ -19,6 +19,7 @@ __pycache__/
 .pytest_cache/
 junit*.xml
 pytest-exec-*.xml
+artifacts/
 
 # 前端构建产物与依赖
 node_modules/

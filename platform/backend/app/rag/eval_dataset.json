@@ -1,0 +1,110 @@
+{
+  "description": "RAG 问答 7 类场景评测集。非 refuse 类断言 expected_titles 命中 top-3（hit@3）并计 MRR；refuse 类断言拒答。第 7 类「口语化短查询」是真实用户输入形态（平均 8~14 字），锁定拒答阈值对短查询的回归——曾因 BM25 绝对分与查询长度正相关，短查询被误拒（见 rag/__init__.py 取值依据）。",
+  "cases": [
+    {
+      "id": "c1", "category": "概念解释",
+      "question": "什么是水平越权？怎么测试？",
+      "expected_titles": ["安全测试：水平越权"]
+    },
+    {
+      "id": "c2", "category": "概念解释",
+      "question": "等价类划分是什么意思",
+      "expected_titles": ["用例设计：等价类划分"]
+    },
+    {
+      "id": "c3", "category": "概念解释",
+      "question": "解释一下边界值分析",
+      "expected_titles": ["用例设计：边界值分析"]
+    },
+    {
+      "id": "d1", "category": "缺陷诊断",
+      "question": "订单金额出现 0.30000000000000004 是什么问题",
+      "expected_titles": ["精度问题：浮点数金额"]
+    },
+    {
+      "id": "d2", "category": "缺陷诊断",
+      "question": "秒杀库存 5 件卖出 10 单，为什么",
+      "expected_titles": ["并发测试：超卖与丢失更新"]
+    },
+    {
+      "id": "d3", "category": "缺陷诊断",
+      "question": "购物车数量传负数会怎样",
+      "expected_titles": ["用例设计：异常参数与参数校验"]
+    },
+    {
+      "id": "s1", "category": "用例设计",
+      "question": "分页接口的用例怎么设计",
+      "expected_titles": ["用例设计：边界值分析"]
+    },
+    {
+      "id": "s2", "category": "用例设计",
+      "question": "怎么写并发测试用例验证不超卖",
+      "expected_titles": ["并发测试：超卖与丢失更新"]
+    },
+    {
+      "id": "s3", "category": "用例设计",
+      "question": "登录接口有哪些安全测试点",
+      "expected_titles": ["安全测试：用户枚举防护", "安全测试：JWT 鉴权"]
+    },
+    {
+      "id": "p1", "category": "项目事实",
+      "question": "项目里埋了几个缺陷，分别是什么",
+      "expected_titles": ["缺陷清单：本项目 5 个注入缺陷"]
+    },
+    {
+      "id": "p2", "category": "项目事实",
+      "question": "测试引擎的分层结构是什么",
+      "expected_titles": ["测试引擎：分层架构"]
+    },
+    {
+      "id": "p3", "category": "项目事实",
+      "question": "这个项目怎么本地启动",
+      "expected_titles": ["项目结构：aitest-platform 总览"]
+    },
+    {
+      "id": "w1", "category": "工具流程",
+      "question": "CI 里为什么不能断言测试全绿",
+      "expected_titles": ["CI：缺陷注入项目的断言姿势"]
+    },
+    {
+      "id": "w2", "category": "工具流程",
+      "question": "怎么接入真实的 LLM 生成用例",
+      "expected_titles": ["平台：AI 用例生成与评审门禁"]
+    },
+    {
+      "id": "w3", "category": "工具流程",
+      "question": "容器里测试怎么重置秒杀商品库存",
+      "expected_titles": ["测试数据准备：数据工厂模式"]
+    },
+    {
+      "id": "r1", "category": "拒答防护",
+      "question": "今天中午吃什么好",
+      "expect": "refuse"
+    },
+    {
+      "id": "r2", "category": "拒答防护",
+      "question": "帮我写一段股票预测代码",
+      "expect": "refuse"
+    },
+    {
+      "id": "r3", "category": "拒答防护",
+      "question": "月球上有多少只企鹅",
+      "expect": "refuse"
+    },
+    {
+      "id": "q1", "category": "口语化短查询",
+      "question": "秒杀为什么超卖",
+      "expected_titles": ["并发测试：超卖与丢失更新"]
+    },
+    {
+      "id": "q2", "category": "口语化短查询",
+      "question": "越权是什么",
+      "expected_titles": ["安全测试：水平越权"]
+    },
+    {
+      "id": "q3", "category": "口语化短查询",
+      "question": "0.1 加 0.2 为什么不等于 0.3",
+      "expected_titles": ["精度问题：浮点数金额"]
+    }
+  ]
+}
