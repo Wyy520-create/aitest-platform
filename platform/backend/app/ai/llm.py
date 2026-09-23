@@ -39,9 +39,12 @@ class MockLLM:
 
     def chat(self, system: str, user: str) -> str:
         """user 里带 openapi 摘要(JSON)，按模板吐出同格式结果。"""
+        # 从 prompt 中截取 JSON 部分（首 { 到尾 }），
+        # 避免 prompt 尾部的文字说明混进来导致解析失败静默降级
+        start, end = user.find("{"), user.rfind("}")
         try:
-            spec = json.loads(user.split("接口清单如下:", 1)[1].strip())
-        except Exception:
+            spec = json.loads(user[start:end + 1]) if start != -1 else {}
+        except json.JSONDecodeError:
             spec = {}
         paths = spec.get("paths", {})
         cases = []

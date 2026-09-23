@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>aitest-platform 智能接口测试平台</title>
+  <!-- 依赖本地化（vendor/）：断网、内网、CDN 被墙都能跑（面试点：离线可交付） -->
+  <link rel="stylesheet" href="vendor/element-plus.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f0f2f5; }
+    /* 顶栏 */
+    .topbar { height: 60px; background: linear-gradient(135deg, #1d2b64 0%, #2b3a8c 100%); color: #fff; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; }
+    .topbar .logo { font-size: 18px; font-weight: 600; letter-spacing: 1px; }
+    .topbar .logo span { color: #67c23a; }
+    .topbar .user-box { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+    .layout { display: flex; min-height: calc(100vh - 60px); }
+    .sider { width: 180px; background: #fff; border-right: 1px solid #e6e8eb; padding-top: 12px; }
+    .sider .item { padding: 14px 24px; cursor: pointer; color: #606266; font-size: 14px; border-left: 3px solid transparent; transition: all .15s; }
+    .sider .item:hover { color: #409eff; }
+    .sider .item.active { color: #409eff; border-left-color: #409eff; background: #ecf5ff; font-weight: 600; }
+    .main { flex: 1; padding: 20px; overflow: auto; }
+    /* 统计卡片 */
+    .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .stat-card { background: #fff; border-radius: 8px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,21,41,.08); }
+    .stat-card .label { color: #909399; font-size: 13px; }
+    .stat-card .value { font-size: 30px; font-weight: 700; margin-top: 6px; }
+    .stat-card .sub { font-size: 12px; color: #c0c4cc; margin-top: 4px; }
+    .v-green { color: #67c23a; } .v-red { color: #f56c6c; } .v-blue { color: #409eff; } .v-orange { color: #e6a23c; }
+    .panel { background: #fff; border-radius: 8px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,21,41,.08); margin-bottom: 20px; }
+    .panel h3 { font-size: 15px; margin-bottom: 14px; color: #303133; }
+    /* 缺陷行高亮 */
+    .bug-row { background: #fef0f0 !important; }
+    .msg-text { color: #f56c6c; font-size: 12px; word-break: break-all; }
+    /* 登录页 */
+    .login-bg { height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1d2b64 0%, #409eff 100%); }
+    .login-card { width: 380px; background: #fff; border-radius: 10px; padding: 36px 34px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+    .login-card h2 { text-align: center; margin-bottom: 6px; font-size: 22px; color: #303133; }
+    .login-card .tip { text-align: center; color: #909399; font-size: 13px; margin-bottom: 22px; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
+    .toolbar .grow { flex: 1; }
+    #chart { width: 100%; height: 320px; }
+    .kv { font-size: 12px; color: #909399; line-height: 1.9; word-break: break-all; }
+  </style>
+</head>
+<body>
+<div id="app" v-cloak>
+
+  <!-- ==================== 登录页 ==================== -->
+  <div v-if="!token" class="login-bg">
+    <div class="login-card">
+      <h2>aitest-platform</h2>
+      <div class="tip">智能接口测试平台 · 演示账号 admin / admin123</div>
+      <el-form @keyup.enter="doLogin">
+        <el-form-item><el-input v-model="loginForm.username" placeholder="用户名" size="large" clearable/></el-form-item>
+        <el-form-item><el-input v-model="loginForm.password" type="password" placeholder="密码" size="large" show-password/></el-form-item>
+        <el-button type="primary" size="large" style="width:100%" :loading="logining" @click="doLogin">登 录</el-button>
+      </el-form>
+    </div>
+  </div>
+
+  <!-- ==================== 主布局 ==================== -->
+  <template v-else>
+    <div class="topbar">
+      <div class="logo">⚡ aitest<span>-platform</span> 智能接口测试平台</div>
+      <div class="user-box">
+        <span>{{ user.name }}</span>
+        <el-button size="small" text style="color:#fff" @click="logout">退出</el-button>
+      </div>
+    </div>
+    <div class="layout">
+      <div class="sider">
+        <div class="item" :class="{active: view==='dashboard'}" @click="go('dashboard')">📊 看板</div>
+        <div class="item" :class="{active: view==='exec'}" @click="go('exec')">▶️ 执行中心</div>
+        <div class="item" :class="{active: view==='cases'}" @click="go('cases')">📁 用例管理</div>
+        <div class="item" :class="{active: view==='ai'}" @click="go('ai')">🤖 AI 工场</div>
+      </div>
+
+      <div class="main">
+
+        <!-- ============ 看板 ============ -->
+        <div v-if="view==='dashboard'">
+          <div class="stat-row">
+            <div class="stat-card"><div class="label">执行总次数</div><div class="value v-blue">{{ dash.executions_total || 0 }}</div><div class="sub">suite + config</div></div>
+            <div class="stat-card"><div class="label">累计命中缺陷</div><div class="value v-red">{{ dash.bug_found_total || 0 }}</div><div class="sub">缺陷检测用例失败数</div></div>
+            <div class="stat-card"><div class="label">配置化用例</div><div class="value">{{ dash.cases?.total || 0 }}</div><div class="sub">已采纳 {{ dash.cases?.reviewed || 0 }} / AI 草稿 {{ dash.cases?.ai_draft || 0 }}</div></div>
+            <div class="stat-card"><div class="label">AI 用例采纳率</div><div class="value v-green">{{ aiStats.acceptance_rate == null ? '--' : aiStats.acceptance_rate + '%' }}</div><div class="sub">已评审 {{ (aiStats.reviewed||0) + (aiStats.rejected||0) }} 条</div></div>
+          </div>
+
+          <div class="panel">
+            <h3>近 15 次执行趋势（通过 / 失败 / 命中缺陷）</h3>
+            <div id="chart"></div>
+          </div>
+
+          <div class="panel" v-if="dash.last_execution">
+            <h3>最近一次执行 #{{ dash.last_execution.id }}</h3>
+            <el-descriptions :column="4" border>
+              <el-descriptions-item label="状态"><el-tag :type="statusType(dash.last_execution.status)">{{ dash.last_execution.status }}</el-tag></el-descriptions-item>
+              <el-descriptions-item label="通过"><span class="v-green">{{ dash.last_execution.passed }}</span></el-descriptions-item>
+              <el-descriptions-item label="失败"><span class="v-red">{{ dash.last_execution.failed }}</span></el-descriptions-item>
+              <el-descriptions-item label="命中缺陷">{{ dash.last_execution.bug_found }}</el-descriptions-item>
+            </el-descriptions>
+          </div>
+        </div>
+
+        <!-- ============ 执行中心 ============ -->
+        <div v-if="view==='exec'">
+          <div class="toolbar">
+            <el-button type="primary" :loading="starting" @click="startExec('suite')">▶ 跑代码套件 (45 cases)</el-button>
+            <el-button type="success" :loading="starting" @click="startExec('config')">▶ 跑配置化用例</el-button>
+            <div class="grow"></div>
+            <el-tag v-if="polling" type="warning" effect="dark">执行中，自动刷新…</el-tag>
+          </div>
+          <div class="panel">
+            <el-table :data="executions" stripe @row-click="openDetail" style="cursor:pointer">
+              <el-table-column prop="id" label="ID" width="60"/>
+              <el-table-column label="类型" width="90">
+                <template #default="{row}">
+                  <el-tag :type="row.exec_type==='suite' ? 'primary' : 'success'" effect="plain">{{ row.exec_type }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="90">
+                <template #default="{row}"><el-tag :type="statusType(row.status)">{{ row.status }}</el-tag></template>
+              </el-table-column>
+              <el-table-column prop="total" label="总用例" width="80"/>
+              <el-table-column label="通过" width="80"><template #default="{row}"><span class="v-green">{{ row.passed }}</span></template></el-table-column>
+              <el-table-column label="失败" width="80"><template #default="{row}"><span class="v-red">{{ row.failed }}</span></template></el-table-column>
+              <el-table-column label="命中缺陷" width="90">
+                <template #default="{row}">
+                  <el-tag v-if="row.bug_found" type="danger" effect="dark">{{ row.bug_found }}</el-tag>
+                  <span v-else>0</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="耗时" width="80"><template #default="{row}">{{ row.duration.toFixed(1) }}s</template></el-table-column>
+              <el-table-column label="开始时间" width="170"><template #default="{row}">{{ fmtTime(row.started_at) }}</template></el-table-column>
+              <el-table-column label="操作" width="90">
+                <template #default="{row}"><el-button size="small" text type="primary" @click.stop="openDetail(row)">详情</el-button></template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+
+        <!-- 执行详情抽屉 -->
+        <el-drawer v-model="detail.show" :title="'执行 #' + detail.data?.id + ' 用例结果'" size="70%">
+          <el-descriptions v-if="detail.data" :column="4" border style="margin-bottom:14px">
+            <el-descriptions-item label="状态"><el-tag :type="statusType(detail.data.status)">{{ detail.data.status }}</el-tag></el-descriptions-item>
+            <el-descriptions-item label="通过">{{ detail.data.passed }}</el-descriptions-item>
+            <el-descriptions-item label="失败">{{ detail.data.failed }}</el-descriptions-item>
+            <el-descriptions-item label="命中缺陷">{{ detail.data.bug_found }}</el-descriptions-item>
+          </el-descriptions>
+          <el-table :data="detail.results" stripe :row-class-name="resultRowClass" max-height="600">
+            <el-table-column label="结果" width="120">
+              <template #default="{row}">
+                <el-tag v-if="row.is_bug_detection && row.outcome!=='passed'" type="danger" effect="dark">🐞 命中缺陷</el-tag>
+                <el-tag v-else-if="row.outcome==='passed'" type="success">passed</el-tag>
+                <el-tag v-else-if="row.outcome==='failed'" type="danger">failed</el-tag>
+                <el-tag v-else type="info">error</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="case_name" label="用例" min-width="300"/>
+            <el-table-column label="耗时" width="80"><template #default="{row}">{{ row.duration.toFixed(2) }}s</template></el-table-column>
+            <el-table-column label="失败原因" min-width="320">
+              <template #default="{row}"><div class="msg-text">{{ row.message || '--' }}</div></template>
+            </el-table-column>
+          </el-table>
+        </el-drawer>
+
+        <!-- ============ 用例管理 ============ -->
+        <div v-if="view==='cases'">
+          <div class="toolbar">
+            <el-button type="primary" @click="openCaseForm()">＋ 新建用例</el-button>
+            <el-select v-model="caseFilter.status" placeholder="状态筛选" clearable style="width:140px" @change="loadCases">
+              <el-option label="草稿待评审" value="draft"/><el-option label="已采纳" value="reviewed"/><el-option label="已驳回" value="rejected"/>
+            </el-select>
+            <el-select v-model="caseFilter.source" placeholder="来源筛选" clearable style="width:140px" @change="loadCases">
+              <el-option label="人工创建" value="manual"/><el-option label="AI 生成" value="ai"/>
+            </el-select>
+            <div class="grow"></div>
+            <el-button @click="startExec('config')" type="success" :loading="starting">▶ 跑全部已采纳用例</el-button>
+          </div>
+          <div class="panel">
+            <el-table :data="cases" stripe>
+              <el-table-column prop="id" label="ID" width="60"/>
+              <el-table-column prop="name" label="用例名" min-width="200" show-overflow-tooltip/>
+              <el-table-column prop="module" label="模块" width="100"/>
+              <el-table-column label="来源" width="90">
+                <template #default="{row}"><el-tag :type="row.source==='ai' ? 'warning' : 'info'" effect="plain">{{ row.source==='ai' ? '🤖 AI' : 'manual' }}</el-tag></template>
+              </el-table-column>
+              <el-table-column label="状态" width="100">
+                <template #default="{row}"><el-tag :type="caseStatusType(row.status)">{{ statusName(row.status) }}</el-tag></template>
+              </el-table-column>
+              <el-table-column label="请求" min-width="260">
+                <template #default="{row}"><div class="kv">{{ row.request.method }} {{ row.request.path }}</div></template>
+              </el-table-column>
+              <el-table-column label="操作" width="230">
+                <template #default="{row}">
+                  <el-button v-if="row.status==='draft'" size="small" type="success" @click="review(row,'approve')">采纳</el-button>
+                  <el-button v-if="row.status==='draft'" size="small" type="danger" plain @click="review(row,'reject')">驳回</el-button>
+                  <el-button size="small" text type="primary" @click="openCaseForm(row)">编辑</el-button>
+                  <el-popconfirm title="删除该用例？" @confirm="delCase(row)"><template #reference><el-button size="small" text type="danger">删除</el-button></template></el-popconfirm>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
+
+        <!-- 用例编辑对话框 -->
+        <el-dialog v-model="caseForm.show" :title="caseForm.id ? '编辑用例 #' + caseForm.id : '新建配置化用例'" width="680px">
+          <el-form label-width="100px">
+            <el-form-item label="用例名"><el-input v-model="caseForm.name" placeholder="如: 商品列表-正常分页"/></el-form-item>
+            <el-form-item label="模块">
+              <el-select v-model="caseForm.module" style="width:200px">
+                <el-option v-for="m in ['auth','products','cart','orders','general']" :key="m" :label="m" :value="m"/>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="请求">
+              <div style="width:100%">
+                <el-select v-model="caseForm.method" style="width:110px">
+                  <el-option v-for="m in ['GET','POST','PUT','DELETE']" :key="m" :label="m" :value="m"/>
+                </el-select>
+                <el-input v-model="caseForm.path" placeholder="/api/products?page=1&size=5" style="width:calc(100% - 110px)"/>
+              </div>
+            </el-form-item>
+            <el-form-item label="请求体 JSON"><el-input v-model="caseForm.bodyText" type="textarea" :rows="3" placeholder='{"product_id": 1, "quantity": 2} 或留空'/></el-form-item>
+            <el-form-item label="需要登录态"><el-switch v-model="caseForm.auth"/></el-form-item>
+            <el-form-item label="期望状态码"><el-input-number v-model="caseForm.status_code" :min="100" :max="599" style="width:160px"/></el-form-item>
+            <el-form-item label="断言 JSON"><el-input v-model="caseForm.expectText" type="textarea" :rows="3" placeholder='{"total": 7} 响应局部匹配，留空则只断状态码'/></el-form-item>
+          </el-form>
+          <template #footer>
+            <el-button @click="caseForm.show=false">取消</el-button>
+            <el-button type="primary" :loading="caseForm.saving" @click="saveCase">保存</el-button>
+          </template>
+        </el-dialog>
+
+        <!-- ============ AI 工场 ============ -->
+        <div v-if="view==='ai'">
+          <div class="stat-row" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="stat-card"><div class="label">待评审草稿</div><div class="value v-orange">{{ aiStats.draft }}</div><div class="sub">AI 生成，等人工确认</div></div>
+            <div class="stat-card"><div class="label">已采纳</div><div class="value v-green">{{ aiStats.reviewed }}</div><div class="sub">进入回归套件</div></div>
+            <div class="stat-card"><div class="label">已驳回</div><div class="value">{{ aiStats.rejected }}</div><div class="sub">生成质量不佳</div></div>
+            <div class="stat-card"><div class="label">采纳率</div><div class="value v-blue">{{ aiStats.acceptance_rate == null ? '--' : aiStats.acceptance_rate + '%' }}</div><div class="sub">度量 AI 而不只是使用 AI</div></div>
+          </div>
+
+          <div class="panel">
+            <h3>LLM 接口用例生成</h3>
+            <div class="kv" style="margin-bottom:12px">
+              流程：拉取被测系统 OpenAPI 文档 → 组装 Prompt → LLM 输出结构化用例 JSON → 解析入库（draft 状态）→ <b>人工评审门禁</b> → 采纳后可执行。<br>
+              未配置 LLM_API_KEY 时自动降级为 MockLLM（规则模板生成），保证整条链路可演示。
+            </div>
+            <el-button type="primary" :loading="generating" @click="generate">🤖 生成一批用例</el-button>
+            <el-alert v-if="genResult"
+              :title="`生成器 [${genResult.llm}] 新增 ${genResult.generated} 条草稿，等待人工评审`"
+              :type="genResult.llm==='mock' ? 'warning' : 'success'" :closable="false" style="margin-top:12px"/>
+          </div>
+
+          <div class="panel">
+            <h3>待评审用例（AI 草稿）</h3>
+            <el-table :data="draftCases" stripe>
+              <el-table-column prop="id" label="ID" width="60"/>
+              <el-table-column prop="name" label="用例名" min-width="220" show-overflow-tooltip/>
+              <el-table-column prop="module" label="模块" width="100"/>
+              <el-table-column label="设计理由" min-width="300">
+                <template #default="{row}"><div class="kv">{{ row.review_note || '--' }}</div></template>
+              </el-table-column>
+              <el-table-column label="操作" width="180">
+                <template #default="{row}">
+                  <el-button size="small" type="success" @click="review(row,'approve')">✓ 采纳</el-button>
+                  <el-button size="small" type="danger" plain @click="review(row,'reject')">✗ 驳回</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-empty v-if="!draftCases.length" description="暂无待评审用例，点击上方按钮生成"/>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </template>
+</div>
+
+<script src="vendor/vue.global.prod.js"></script>
+<script src="vendor/element-plus.full.min.js"></script>
+<script src="vendor/echarts.min.js"></script>
+<script>
+/* ================= API 封装（fetch + token + 401 统一跳登录） ================= */
+const API_BASE = location.port === '5500' ? 'http://localhost:8100' : '';  // 静态服务器 5500 → 后端 8100
+async function api(method, url, body) {
+  const token = localStorage.getItem('token') || '';
+  const resp = await fetch(API_BASE + url, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (resp.status === 401 && !url.includes('/api/auth/login')) {
+    // 登录接口自身 401 = 密码错误，走正常报错；其他接口 401 = token 失效，跳登录
+    localStorage.removeItem('token'); location.reload(); throw new Error('未登录');
+  }
+  if (resp.status === 204) return null;
+  const data = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(data.detail || ('HTTP ' + resp.status));
+  return data;
+}
+
+const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
+const { ElMessage, ElMessageBox } = ElementPlus;
+
+createApp({
+  setup() {
+    /* ---------- 全局状态 ---------- */
+    const token = ref(localStorage.getItem('token') || '');
+    const user = reactive({ name: '' });
+    const view = ref('dashboard');
+    const logining = ref(false);
+    const loginForm = reactive({ username: 'admin', password: '' });
+
+    /* ---------- 看板 ---------- */
+    const dash = ref({});
+    const aiStats = ref({});
+    const executions = ref([]);
+    const cases = ref([]);
+    const starting = ref(false);
+    const polling = ref(false);
+
+    /* ---------- 登录/登出 ---------- */
+    async function doLogin() {
+      logining.value = true;
+      try {
+        const r = await api('POST', '/api/auth/login', { username: loginForm.username, password: loginForm.password });
+        localStorage.setItem('token', r.access_token);
+        token.value = r.access_token;
+        user.name = loginForm.username;
+        ElMessage.success('登录成功');
+        go('dashboard');
+      } catch (e) { ElMessage.error('登录失败：' + e.message); }
+      logining.value = false;
+    }
+    function logout() { localStorage.removeItem('token'); location.reload(); }
+
+    /* ---------- 视图切换（惰性加载对应数据） ---------- */
+    function go(v) {
+      view.value = v;
+      if (v === 'dashboard') { loadDash(); loadAiStats(); }
+      if (v === 'exec') loadExecutions();
+      if (v === 'cases') loadCases();
+      if (v === 'ai') { loadAiStats(); loadDraftCases(); }
+    }
+
+    /* ---------- 数据加载 ---------- */
+    async function loadDash() { dash.value = await api('GET', '/api/dashboard'); await nextTick(); renderChart(); }
+    async function loadAiStats() { aiStats.value = await api('GET', '/api/ai/stats'); }
+    async function loadExecutions() { executions.value = await api('GET', '/api/executions?limit=20'); checkPolling(); }
+    async function loadCases() {
+      const q = [];
+      if (caseFilter.status) q.push('status=' + caseFilter.status);
+      if (caseFilter.source) q.push('source=' + caseFilter.source);
+      cases.value = await api('GET', '/api/cases' + (q.length ? '?' + q.join('&') : ''));
+    }
+    const draftCases = ref([]);
+    async function loadDraftCases() { draftCases.value = await api('GET', '/api/cases?status=draft&source=ai'); }
+
+    /* ---------- 执行：触发 + 轮询 ---------- */
+    async function startExec(type) {
+      starting.value = true;
+      try {
+        const r = await api('POST', '/api/executions', { exec_type: type });
+        ElMessage.success('已触发执行 #' + r.id);
+        await loadExecutions();
+        startPolling();
+      } catch (e) { ElMessage.error(e.message); }
+      starting.value = false;
+    }
+    let timer = null;
+    function startPolling() {
+      polling.value = true;
+      timer = setInterval(async () => {
+        executions.value = await api('GET', '/api/executions?limit=20');
+        checkPolling();
+      }, 3000);
+    }
+    function checkPolling() {
+      const running = executions.value.some(e => e.status === 'running');
+      if (!running && timer) { clearInterval(timer); timer = null; polling.value = false; loadDash(); }
+    }
+
+    /* ---------- 执行详情 ---------- */
+    const detail = reactive({ show: false, data: null, results: [] });
+    async function openDetail(row) {
+      detail.data = row;
+      detail.show = true;
+      detail.results = await api('GET', `/api/executions/${row.id}/results`);
+    }
+    function resultRowClass({ row }) { return row.is_bug_detection && row.outcome !== 'passed' ? 'bug-row' : ''; }
+
+    /* ---------- 用例表单 ---------- */
+    const caseFilter = reactive({ status: null, source: null });
+    const caseForm = reactive({ show: false, id: null, name: '', module: 'general', method: 'GET', path: '',
+                                 bodyText: '', auth: false, status_code: 200, expectText: '', saving: false });
+    function openCaseForm(row) {
+      if (row) {
+        caseForm.id = row.id; caseForm.name = row.name; caseForm.module = row.module;
+        caseForm.method = row.request.method; caseForm.path = row.request.path;
+        caseForm.bodyText = row.request.body ? JSON.stringify(row.request.body) : '';
+        caseForm.auth = !!row.request.auth;
+        caseForm.status_code = row.expect.status_code ?? 200;
+        caseForm.expectText = row.expect.json_contains ? JSON.stringify(row.expect.json_contains) : '';
+      } else {
+        Object.assign(caseForm, { id: null, name: '', module: 'general', method: 'GET', path: '/api/products?page=1&size=5',
+                                  bodyText: '', auth: false, status_code: 200, expectText: '', saving: false });
+      }
+      caseForm.show = true;
+    }
+    async function saveCase() {
+      let body = null, expect = { status_code: caseForm.status_code };
+      try {
+        if (caseForm.bodyText.trim()) body = JSON.parse(caseForm.bodyText);
+        if (caseForm.expectText.trim()) expect.json_contains = JSON.parse(caseForm.expectText);
+      } catch (e) { ElMessage.error('JSON 格式错误: ' + e.message); return; }
+      const payload = { name: caseForm.name, module: caseForm.module,
+        request: { method: caseForm.method, path: caseForm.path, body, auth: caseForm.auth },
+        expect };
+      caseForm.saving = true;
+      try {
+        await api(caseForm.id ? 'PUT' : 'POST', '/api/cases' + (caseForm.id ? '/' + caseForm.id : ''), payload);
+        ElMessage.success(caseForm.id ? '已更新' : '已创建');
+        caseForm.show = false;
+        loadCases();
+      } catch (e) { ElMessage.error(e.message); }
+      caseForm.saving = false;
+    }
+    async function delCase(row) { await api('DELETE', '/api/cases/' + row.id); ElMessage.success('已删除'); loadCases(); }
+
+    /* ---------- 评审 ---------- */
+    async function review(row, action) {
+      let note = '';
+      if (action === 'reject') {
+        const res = await ElMessageBox.prompt('驳回原因（会记录到 review_note）', '驳回用例',
+          { confirmButtonText: '驳回', cancelButtonText: '取消' }).catch(() => null);
+        if (res === null) return;          // 点了取消
+        note = res.value || '';            // prompt 返回 {value, action}，取 value
+      }
+      await api('POST', `/api/cases/${row.id}/review`, { action, note });
+      ElMessage.success(action === 'approve' ? '已采纳，该用例可被执行' : '已驳回');
+      loadCases(); loadDraftCases(); loadAiStats(); loadDash();
+    }
+
+    /* ---------- AI 生成 ---------- */
+    const generating = ref(false);
+    const genResult = ref(null);
+    async function generate() {
+      generating.value = true;
+      try {
+        genResult.value = await api('POST', '/api/ai/generate');
+        ElMessage.success('生成完成，等待人工评审');
+        loadDraftCases(); loadAiStats(); loadDash();
+      } catch (e) { ElMessage.error(e.message); }
+      generating.value = false;
+    }
+
+    /* ---------- ECharts 趋势图 ---------- */
+    let chart = null;
+    function renderChart() {
+      const el = document.getElementById('chart');
+      if (!el) return;
+      // v-if 切换视图会销毁重建 #chart 节点：旧实例绑死旧 DOM，
+      // 直接复用会画在已销毁的节点上（表现为图表空白），须识别并重建
+      if (chart && chart.getDom() !== el) { chart.dispose(); chart = null; }
+      chart = chart || echarts.init(el);
+      const trend = dash.value.trend || [];
+      chart.setOption({
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['通过', '失败', '命中缺陷'] },
+        grid: { left: 40, right: 20, top: 40, bottom: 30 },
+        xAxis: { type: 'category', data: trend.map(t => '#' + t.id) },
+        yAxis: { type: 'value', minInterval: 1 },
+        series: [
+          { name: '通过', type: 'line', smooth: true, data: trend.map(t => t.passed), itemStyle: { color: '#67c23a' }, areaStyle: { opacity: .08 } },
+          { name: '失败', type: 'line', smooth: true, data: trend.map(t => t.failed), itemStyle: { color: '#f56c6c' } },
+          { name: '命中缺陷', type: 'bar', data: trend.map(t => t.bug_found), itemStyle: { color: '#e6a23c' }, barMaxWidth: 18 },
+        ],
+      });
+    }
+    window.addEventListener('resize', () => chart && chart.resize());
+
+    /* ---------- 工具 ---------- */
+    function statusType(s) { return { running: 'primary', passed: 'success', failed: 'danger', error: 'info' }[s] || 'info'; }
+    function caseStatusType(s) { return { draft: 'warning', reviewed: 'success', rejected: 'info' }[s] || 'info'; }
+    function statusName(s) { return { draft: '待评审', reviewed: '已采纳', rejected: '已驳回' }[s] || s; }
+    function fmtTime(t) { return (t || '').replace('T', ' ').slice(0, 19); }
+
+    onMounted(() => {
+      if (token.value) { user.name = 'admin'; go('dashboard'); }
+    });
+
+    return { token, user, loginForm, logining, doLogin, logout, view, go,
+      dash, aiStats, executions, cases, draftCases, caseFilter, starting, polling,
+      startExec, detail, openDetail, resultRowClass, caseForm, openCaseForm, saveCase, delCase, review,
+      generating, genResult, generate, statusType, caseStatusType, statusName, fmtTime };
+  },
+})
+.use(ElementPlus)
+.mount('#app');
+</script>
+</body>
+</html>
