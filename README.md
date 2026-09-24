@@ -76,6 +76,9 @@ docker compose up -d          # sut + backend + frontend 三服务
 浏览器访问 `http://localhost:3000`，登录 `admin / admin123`：
 执行中心跑一次"套件执行" → 看板应显示 45 用例 / 38 通过 / 7 失败 / 命中缺陷 7。
 
+> 📖 **给面试官/新手的完整版**：[docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) —— 含 3 分钟项目讲法、
+> Windows 部署、cpolar 现场演示步骤、"印象最深的 bug"面试回答（STAR 版）。
+
 ### 方式二：本地开发
 
 ```bash
