@@ -118,7 +118,7 @@
           </div>
           <div class="panel">
             <el-table :data="executions" stripe @row-click="openDetail" style="cursor:pointer">
-              <el-table-column prop="id" label="ID" width="60"/>
+              <el-table-column prop="id" label="ID" width="60"><template #default="{row}">{{ row.id }}</template></el-table-column>
               <el-table-column label="类型" width="90">
                 <template #default="{row}">
                   <el-tag :type="row.exec_type==='suite' ? 'primary' : 'success'" effect="plain">{{ row.exec_type }}</el-tag>
@@ -127,7 +127,7 @@
               <el-table-column label="状态" width="90">
                 <template #default="{row}"><el-tag :type="statusType(row.status)">{{ row.status }}</el-tag></template>
               </el-table-column>
-              <el-table-column prop="total" label="总用例" width="80"/>
+              <el-table-column prop="total" label="总用例" width="80"><template #default="{row}">{{ row.total }}</template></el-table-column>
               <el-table-column label="通过" width="80"><template #default="{row}"><span class="v-green">{{ row.passed }}</span></template></el-table-column>
               <el-table-column label="失败" width="80"><template #default="{row}"><span class="v-red">{{ row.failed }}</span></template></el-table-column>
               <el-table-column label="命中缺陷" width="90">
@@ -162,7 +162,7 @@
                 <el-tag v-else type="info">error</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="case_name" label="用例" min-width="300"/>
+            <el-table-column prop="case_name" label="用例" min-width="300"><template #default="{row}">{{ row.case_name }}</template></el-table-column>
             <el-table-column label="耗时" width="80"><template #default="{row}">{{ row.duration.toFixed(2) }}s</template></el-table-column>
             <el-table-column label="失败原因" min-width="320">
               <template #default="{row}"><div class="msg-text">{{ row.message || '--' }}</div></template>
@@ -185,9 +185,9 @@
           </div>
           <div class="panel">
             <el-table :data="cases" stripe>
-              <el-table-column prop="id" label="ID" width="60"/>
-              <el-table-column prop="name" label="用例名" min-width="200" show-overflow-tooltip/>
-              <el-table-column prop="module" label="模块" width="100"/>
+              <el-table-column prop="id" label="ID" width="60"><template #default="{row}">{{ row.id }}</template></el-table-column>
+              <el-table-column prop="name" label="用例名" min-width="200" show-overflow-tooltip><template #default="{row}">{{ row.name }}</template></el-table-column>
+              <el-table-column prop="module" label="模块" width="100"><template #default="{row}">{{ row.module }}</template></el-table-column>
               <el-table-column label="来源" width="90">
                 <template #default="{row}"><el-tag :type="row.source==='ai' ? 'warning' : 'info'" effect="plain">{{ row.source==='ai' ? '🤖 AI' : 'manual' }}</el-tag></template>
               </el-table-column>
@@ -261,9 +261,12 @@
           <div class="panel">
             <h3>待评审用例（AI 草稿）</h3>
             <el-table :data="draftCases" stripe>
-              <el-table-column prop="id" label="ID" width="60"/>
-              <el-table-column prop="name" label="用例名" min-width="220" show-overflow-tooltip/>
-              <el-table-column prop="module" label="模块" width="100"/>
+              <!-- 坑：in-DOM 模板（无构建单文件）下 el-table-column 的 prop 简写列
+                   只出表头不出数据单元格，必须显式写 template 插槽——与 SFC 构建态
+                   行为不同，M5 浏览器实测踩坑后全站统一改为显式插槽。 -->
+              <el-table-column prop="id" label="ID" width="60"><template #default="{row}">{{ row.id }}</template></el-table-column>
+              <el-table-column prop="name" label="用例名" min-width="220" show-overflow-tooltip><template #default="{row}">{{ row.name }}</template></el-table-column>
+              <el-table-column prop="module" label="模块" width="100"><template #default="{row}">{{ row.module }}</template></el-table-column>
               <el-table-column label="设计理由" min-width="300">
                 <template #default="{row}"><div class="kv">{{ row.review_note || '--' }}</div></template>
               </el-table-column>
@@ -325,7 +328,7 @@
                 <div class="stat-card"><div class="label">用例通过</div><div class="value" :class="evalReport.all_passed ? 'v-green' : 'v-red'">{{ evalReport.details.filter(d=>d.ok).length }}/{{ evalReport.total }}</div></div>
               </div>
               <el-table :data="evalCats" size="small" border>
-                <el-table-column prop="cat" label="场景类别"/>
+                <el-table-column prop="cat" label="场景类别"><template #default="{row}">{{ row.cat }}</template></el-table-column>
                 <el-table-column prop="ok" label="通过/总数" width="120">
                   <template #default="{row}">{{ row.ok }}/{{ row.total }}</template>
                 </el-table-column>
