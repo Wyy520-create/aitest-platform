@@ -8,7 +8,7 @@
 
 1. 打开 https://platform.deepseek.com 注册
 2. 左侧「API Keys」→ 创建 key，复制保存（只显示一次）
-3. 充值 ¥10 即可跑数千次生成（deepseek-chat 便宜，适合项目演示）
+3. 充值 ¥10 够跑上千次生成（deepseek-chat 按 token 计费，一次生成约 1 分钱，适合项目演示）
 
 ## 二、配置方式
 
