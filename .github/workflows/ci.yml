@@ -1,16 +1,18 @@
 # CI：缺陷注入项目的正确断言姿势——不断言"全绿"，
 # 而断言"套件行为符合预期签名"（45/38/7/7）。
 #
-# 两个 job：
+# 三个 job：
 # 1. api-tests     —— compose 起 SUT 容器，一次性 engine 容器跑 45 用例，
 #                     用 verify_suite.py 校验签名（任何注入缺陷被误修/套件被改坏都会报警）
 # 2. platform-e2e  —— 整套 compose 起来，纯 HTTP 走一遍
 #                     登录→触发套件执行→轮询→断言平台侧统计 45/38/7/7
+# 3. rag-eval      —— RAG 检索层质量评测（21 条 7 类，标准库零依赖直跑）
 name: CI
 
 on:
   push:
-    branches: [main]
+    # 本仓库默认分支是 master（保留 main 以兼容未来迁移默认分支名）
+    branches: [master, main]
   pull_request:
   workflow_dispatch:
 
