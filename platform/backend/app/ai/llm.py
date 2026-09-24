@@ -73,3 +73,18 @@ class MockLLM:
 def get_llm():
     """工厂：有 key 用真模型，没 key 用 Mock。"""
     return RealLLM() if LLM_API_KEY else MockLLM()
+
+
+def upstream_error(e: requests.HTTPError) -> str:
+    """把上游 LLM 的 HTTPError 格式化成友好消息，供 API 层 502 透传。
+
+    笼统的 500 会让使用者分不清是 key 失效、余额不足还是网络问题；
+    透出 DeepSeek 的真实错误码与消息，一眼定位（例：402 即"接入已通，差充值"）。
+    """
+    if e.response is None:
+        return str(e)
+    try:
+        msg = e.response.json().get("error", {}).get("message", "")
+    except ValueError:
+        msg = (e.response.text or "")[:200]
+    return f"LLM 上游错误 {e.response.status_code}: {msg or str(e)}"

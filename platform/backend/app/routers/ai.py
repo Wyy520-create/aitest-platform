@@ -1,11 +1,13 @@
 """AI 工作台接口。"""
-from fastapi import APIRouter, Depends
+import requests
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from ..database import get_db
 from ..models import ConfigCase
 from ..ai.case_generator import generate_and_save
+from ..ai.llm import upstream_error
 from ..security import get_current_user
 
 router = APIRouter(prefix="/api/ai", tags=["AI 工作台"])
@@ -14,7 +16,12 @@ router = APIRouter(prefix="/api/ai", tags=["AI 工作台"])
 @router.post("/generate")
 def generate(_=Depends(get_current_user)):
     """触发一次 AI 用例生成。生成的用例 status=draft，等待人工评审。"""
-    return generate_and_save()
+    try:
+        return generate_and_save()
+    except requests.HTTPError as e:
+        # 上游 LLM 故障透传成 502 + 真实错误消息（key 失效/余额不足/网络
+        # 问题一眼区分），而不是笼统 500——见 llm.upstream_error。
+        raise HTTPException(status_code=502, detail=upstream_error(e))
 
 
 @router.get("/stats")
