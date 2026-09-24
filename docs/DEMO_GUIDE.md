@@ -186,31 +186,49 @@ Forwarding  https://a1b2c3d4.cpolar.io -> http://localhost:3000
 
 ### 2.3 查看公网地址：cpolar 本地管理页（9200 端口）
 
-cpolar 启动后会开一个本地管理界面，**不用回终端翻日志**：
+**9200 管理页由 cpolar 进程常驻提供**——不管用哪种方式启动（前台 / daemon 后台 / systemctl 服务），只要 cpolar 进程活着就能访问。这也是 `systemctl enable --now cpolar` 启动后立刻能开 9200 的原因：
 
-- **浏览器直接访问 `http://localhost:9200`**——首次打开输入你的 Authtoken 登录；左侧 "在线隧道列表" 里能看到当前隧道的公网 URL（还能看请求统计）
+- **浏览器直接访问 `http://localhost:9200`**——首次打开输入你的 Authtoken 登录；左侧 "在线隧道列表" 里能看到当前隧道的公网 URL（还能看请求统计）。没有在线隧道时列表为空，但页面照常可用
 - 命令行取公网地址（适合脚本里用）：
   ```bash
   curl -s http://localhost:9200/api/tunnels
   ```
 
-### 2.4 让隧道长期挂在后台（不占用终端）
+### 2.4 短暂运行 vs 长期后台运行（按系统对照）
 
-`cpolar http 3000` 是前台进程，终端关了隧道就断。要长期挂：
+`cpolar http 3000` 是前台进程，Ctrl+C / 关终端就断。各系统的"短暂运行"和"后台常驻"写法：
 
+**Linux / macOS：**
 ```bash
-# 方式一：当前电脑后台运行（关掉这个终端仍存活，关机/休眠才断）
-nohup cpolar http 3000 > /tmp/cpolar.log 2>&1 &
+# ① 终端前台短暂运行（Ctrl+C 关闭）——面试演示推荐这个，最直观
+cpolar http 3000
 
-# 方式二：注册为系统服务（Linux，开机自启、崩溃自恢复——官方安装脚本自带该服务）
+# ② cpolar 原生后台运行（-daemon=on，关掉终端仍存活，关机/休眠才断）
+cpolar http 3000 -daemon=on
+# 关闭后台：pkill cpolar
+
+# ③ 注册为系统服务（官方安装脚本自带 cpolar.service，开机自启、崩溃自恢复）
 sudo systemctl enable --now cpolar
-
-# 方式三：Windows 上后台运行
-Start-Process -NoNewWindow cpolar -ArgumentList "http","3000"   # PowerShell
-# 或在 cpolar 客户端图形界面里把隧道设为开机自启
+# 注意：服务方式默认跑配置文件（~/.cpolar/cpolar.yml）里定义的隧道；
+# 配置里没有隧道时，启动后只有 9200 管理页、没有指向 3000 的隧道。
+# 要常驻 3000 隧道，先按 ② 的 daemon 方式跑，或把隧道写进配置文件再启用服务。
+# 停止服务：sudo systemctl stop cpolar
 ```
 
-后台运行时查公网地址就用 2.3 的 `localhost:9200` 管理页。**面试场景推荐方式一**：够稳、随时 `kill %1` 或 `pkill cpolar` 收回。
+**Windows（PowerShell）：**
+```powershell
+# ① 终端前台短暂运行（Ctrl+C 关闭）
+cpolar http 3000
+
+# ② 后台长期运行（启动后命令立即返回，不占用终端）
+Start-Process cpolar -ArgumentList "http","3000"
+
+# 关闭后台进程
+Get-Process cpolar | Stop-Process        # PowerShell 的 pkill 等价写法
+# 或者在任务管理器里结束 cpolar.exe
+```
+
+后台/服务运行时查公网地址，用 2.3 的 `localhost:9200` 管理页即可，不用翻终端日志。
 
 ### 2.5 现场话术（cpolar 与公司正式部署的对应）
 
