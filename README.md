@@ -76,6 +76,7 @@ docker compose up -d          # sut + backend + frontend 三服务
 浏览器访问 `http://localhost:3000`，登录 `admin / admin123`：
 执行中心跑一次"套件执行" → 看板应显示 45 用例 / 38 通过 / 7 失败 / 命中缺陷 7。
 
+> 📖 **完整部署指南**：[docs/DEPLOY.md](docs/DEPLOY.md) —— Windows / macOS / Linux 逐步部署、常见问题排查、cpolar 公网演示。
 
 ### 方式二：本地开发
 
@@ -122,7 +123,7 @@ aitest-platform/
 │   │   ├── rag/            # bm25 / knowledge / qa / evaluator + 评测集
 │   │   └── runner.py       # subprocess 执行 + junitxml 解析
 │   └── frontend/           # index.html 单文件 SPA + vendor/ 本地依赖
-├── docs/                   # BUGS.md / RAG_KNOWLEDGE.md / LLM_SETUP.md
+├── docs/                   # DEPLOY.md / BUGS.md / RAG_KNOWLEDGE.md / LLM_SETUP.md
 ├── scripts/                # verify_suite.py / eval_rag.py
 ├── docker-compose.yml      # sut + backend + frontend（engine 为 tools profile）
 └── .github/workflows/ci.yml # api-tests / platform-e2e / rag-eval
