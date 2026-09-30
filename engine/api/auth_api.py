@@ -25,7 +25,11 @@ class AuthApi:
     def login_and_set_token(self, username: str, password: str):
         """登录并把 token 装进 client（之后请求自动带）。"""
         resp = self.login(username, password)
-        self.client.set_token(resp.json()["access_token"])
+        body = resp.json()
+        assert resp.status_code == 200 and "access_token" in body, (
+            f"测试用户登录失败: status={resp.status_code}, body={resp.text}"
+        )
+        self.client.set_token(body["access_token"])
         return resp
 
     def me(self):

@@ -72,7 +72,10 @@ def order_api(client):
 def user(auth_api):
     """注册+登录+token 已装进 client 的用户。返回 (username, password)。"""
     username, password = random_username(), random_password()
-    auth_api.register(username, password)
+    resp = auth_api.register(username, password)
+    assert resp.status_code == 201, (
+        f"测试用户注册失败: status={resp.status_code}, body={resp.text}"
+    )
     auth_api.login_and_set_token(username, password)
     return username, password
 
