@@ -63,6 +63,15 @@ CI（每次 push 三个 job）：
 | RAG 一致性 | 本地 / 容器 / CI 三端同语料同指标 | 完全一致 |
 | AI 工场 | 无 key 降级 | Mock 生成可用草稿，评审流照常 |
 
+## 运行界面
+
+`docker compose up -d` 启动后（`http://localhost:3000`，`admin / admin123`）的实际运行效果，截图随仓库版本管理（`docs/screenshots/`）：
+
+<img src="docs/screenshots/dashboard.jpeg" alt="看板 · 执行趋势与最近执行签名 45/38/7/7" width="49%" /> <img src="docs/screenshots/exec-center.jpeg" alt="执行中心 · 一键触发与执行历史" width="49%" />
+<img src="docs/screenshots/run-detail-bugs.jpeg" alt="用例级结果 · 🐞 命中缺陷与断言证据" width="49%" /> <img src="docs/screenshots/cases.jpeg" alt="用例管理 · AI 草稿评审与采纳状态" width="49%" />
+<img src="docs/screenshots/ai-workshop.jpeg" alt="AI 工场 · LLM 生成 + 人工评审门禁" width="49%" /> <img src="docs/screenshots/login.jpeg" alt="平台登录页" width="49%" />
+<img src="docs/screenshots/sut-store.jpeg" alt="被测系统 mini-mall · 商城前台" width="49%" /> <img src="docs/screenshots/sut-api-docs.jpeg" alt="被测系统 mini-mall · OpenAPI 文档" width="49%" />
+
 ## 快速开始
 
 ### 方式一：容器一键起（推荐）
